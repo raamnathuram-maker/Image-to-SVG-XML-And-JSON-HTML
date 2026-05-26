@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Image/Video → HTML, SVG, XML & JSON</title>
+<style>
+  :root {
+    --bg:#0c0c0c; --card:#141414; --border:#2a2a2a;
+    --accent:#00e5ff; --accent2:#ff3d71; --green:#39ff14;
+    --yellow:#ffd700; --purple:#bf5fff; --text:#f0f0f0; --muted:#666;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;min-height:100vh;-webkit-tap-highlight-color:transparent;}
+  .wrap{max-width:980px;margin:0 auto;padding:26px 13px 80px;}
+
+  .hdr{text-align:center;margin-bottom:26px;}
+  .hdr h1{font-size:clamp(1.1rem,4vw,2rem);font-weight:900;color:var(--accent);text-shadow:0 0 30px rgba(0,229,255,.4);}
+  .hdr p{margin-top:6px;font-size:.63rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+  .badge{display:inline-block;margin-top:8px;background:rgba(57,255,20,.1);border:1px solid var(--green);color:var(--green);font-size:.58rem;letter-spacing:2px;padding:3px 10px;border-radius:20px;}
+
+  .mode-row{display:flex;gap:8px;margin-bottom:16px;}
+  .mode-btn{flex:1;padding:10px;border-radius:8px;font-family:'Courier New',monospace;font-size:.7rem;font-weight:700;letter-spacing:2px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted);transition:all .2s;}
+  .mode-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08);}
+  .mode-btn.video-mode.on{border-color:var(--purple);color:var(--purple);background:rgba(191,95,255,.08);}
+
+  .pick-wrap{position:relative;margin-bottom:16px;}
+  .pick-btn{display:block;width:100%;border:2px dashed #444;border-radius:12px;padding:44px 20px;text-align:center;background:var(--card);cursor:pointer;transition:border-color .2s;}
+  .pick-btn:active{border-color:var(--accent);}
+  #fileInput{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;font-size:16px;}
+  .pick-btn .ico{font-size:2.6rem;display:block;margin-bottom:9px;}
+  .pick-btn .mt{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .pick-btn .st{font-size:.66rem;color:var(--muted);letter-spacing:1px;}
+
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px;margin:0 0 14px;}
+  .ob{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;}
+  .ob label{display:block;font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .ob select{width:100%;background:#0a0a0a;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:'Courier New',monospace;font-size:.72rem;outline:none;}
+
+  .video-opts{display:none;background:var(--card);border:1px solid var(--purple);border-radius:10px;padding:13px;margin-bottom:14px;}
+  .video-opts.on{display:block;}
+  .video-opts > label{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--purple);display:block;margin-bottom:8px;}
+  .vopt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .vopt-item label{font-size:.54rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;}
+  .vopt-item select,.vopt-item input{width:100%;background:#0a0a0a;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:'Courier New',monospace;font-size:.72rem;outline:none;}
+
+  /* Custom JSON Builder */
+  .custom-json-section{display:none;background:rgba(0,229,255,.04);border:1px solid var(--accent);border-radius:10px;padding:13px;margin-top:10px;}
+  .custom-json-section.on{display:block;}
+  .custom-json-section > label{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px;}
+  .cj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .cj-item{background:#0a0a0a;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .cj-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+  .cj-item label{font-size:.62rem;color:var(--text);cursor:pointer;letter-spacing:1px;}
+  .cj-item.checked{border-color:var(--accent);background:rgba(0,229,255,.07);}
+  .cj-key-wrap{margin-top:8px;}
+  .cj-key-wrap label{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;}
+  .cj-key-wrap input{width:100%;background:#0a0a0a;border:1px solid var(--border);color:var(--accent);padding:7px 10px;border-radius:6px;font-family:'Courier New',monospace;font-size:.72rem;outline:none;}
+
+  .cvt{display:block;width:100%;padding:15px;background:linear-gradient(135deg,#003d4d,#005f73);border:1px solid var(--accent);color:var(--accent);font-family:'Courier New',monospace;font-size:.9rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-radius:10px;cursor:pointer;margin-bottom:20px;}
+  .cvt:active:not(:disabled){background:linear-gradient(135deg,#005f73,#0096c7);}
+  .cvt:disabled{opacity:.3;cursor:not-allowed;}
+  .cvt.video-active{background:linear-gradient(135deg,#2d004d,#4b0082);border-color:var(--purple);color:var(--purple);}
+
+  .prog{height:3px;background:var(--border);border-radius:2px;margin-bottom:18px;display:none;overflow:hidden;}
+  .prog.on{display:block;}
+  .pf{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .3s;}
+
+  .prev{display:none;margin-bottom:16px;gap:12px;align-items:flex-start;}
+  .prev.on{display:flex;flex-wrap:wrap;}
+  .prev img,.prev video{max-height:110px;max-width:180px;border-radius:6px;border:1px solid var(--border);object-fit:contain;}
+  .pinfo{font-size:.66rem;color:var(--muted);line-height:2;}
+  .pinfo b{color:var(--accent2);}
+
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;}
+  .tab{padding:9px 14px;border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-family:'Courier New',monospace;font-size:.68rem;letter-spacing:2px;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .2s;white-space:nowrap;}
+  .tab.on{background:var(--card);color:var(--accent);border-color:var(--accent);}
+  .tab.xml-tab.on{color:var(--yellow);border-color:var(--yellow);}
+  .tab.json-tab.on{color:var(--green);border-color:var(--green);}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:0 10px 10px 10px;padding:13px;}
+  .chdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+  .clabel{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+  .brow{display:flex;gap:5px;flex-wrap:wrap;}
+  .abtn{padding:8px 14px;border-radius:5px;font-family:'Courier New',monospace;font-size:.62rem;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid;min-height:36px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+  .cbtn{background:rgba(0,229,255,.07);border-color:var(--accent);color:var(--accent);}
+  .cbtn.ok{border-color:var(--green);color:var(--green);background:rgba(57,255,20,.07);}
+  .dbtn{background:rgba(255,61,113,.07);border-color:var(--accent2);color:var(--accent2);}
+  .xbtn{background:rgba(255,215,0,.07);border-color:var(--yellow);color:var(--yellow);}
+  .jbtn{background:rgba(57,255,20,.07);border-color:var(--green);color:var(--green);}
+
+  .codebox{background:#070707;border:1px solid #1e1e1e;border-radius:7px;padding:12px;max-height:340px;overflow:auto;font-size:.62rem;line-height:1.6;color:#a8b8c8;white-space:pre-wrap;word-break:break-all;-webkit-overflow-scrolling:touch;}
+  .stats{margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;}
+  .stat{font-size:.6rem;color:var(--muted);}
+  .stat b{color:var(--accent2);}
+
+  .xml-style-row,.json-format-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+  .xml-style-row label,.json-format-row label{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .xml-style-row select{background:#0a0a0a;border:1px solid var(--border);color:var(--yellow);padding:5px 8px;border-radius:6px;font-family:'Courier New',monospace;font-size:.7rem;outline:none;}
+  .json-format-row select{background:#0a0a0a;border:1px solid var(--border);color:var(--green);padding:5px 8px;border-radius:6px;font-family:'Courier New',monospace;font-size:.7rem;outline:none;}
+
+  .vprog-info{background:rgba(191,95,255,.08);border:1px solid var(--purple);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.65rem;color:var(--purple);display:none;line-height:1.8;}
+  .vprog-info.on{display:block;}
+
+  #copyTA{position:fixed;top:-9999px;left:0;width:1px;height:1px;opacity:0;}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(8px);background:#111;border:1px solid var(--green);color:var(--green);padding:9px 18px;border-radius:6px;font-size:.7rem;letter-spacing:1px;opacity:0;transition:all .3s;z-index:9998;pointer-events:none;white-space:nowrap;}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .svgPreviewWrap{display:none;margin-bottom:10px;}
+  .lottie-info{display:none;background:rgba(191,95,255,.1);border:1px solid var(--purple);border-radius:8px;padding:10px 13px;margin-bottom:10px;font-size:.62rem;color:var(--purple);line-height:1.8;}
+
+  /* GIF MODE */
+  --gif:#ff9f1c;
+  .mode-btn.gif-mode.on{border-color:#ff9f1c;color:#ff9f1c;background:rgba(255,159,28,.08);}
+  .gif-opts{display:none;background:var(--card);border:1px solid #ff9f1c;border-radius:10px;padding:13px;margin-bottom:14px;}
+  .gif-opts.on{display:block;}
+  .gif-opts > label{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:#ff9f1c;display:block;margin-bottom:8px;}
+  .gopt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .gopt-item label{font-size:.54rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;}
+  .gopt-item select{width:100%;background:#0a0a0a;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:'Courier New',monospace;font-size:.72rem;outline:none;}
+  .cvt.gif-active{background:linear-gradient(135deg,#4d2d00,#7a4800);border-color:#ff9f1c;color:#ff9f1c;}
+  .gif-info{background:rgba(255,159,28,.08);border:1px solid #ff9f1c;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.65rem;color:#ff9f1c;display:none;line-height:1.8;}
+  .gif-info.on{display:block;}
+  .tab.gif-tab.on{color:#ff9f1c;border-color:#ff9f1c;}
+  .gif-html-info{display:none;background:rgba(255,159,28,.08);border:1px solid #ff9f1c;border-radius:8px;padding:10px 13px;margin-bottom:10px;font-size:.62rem;color:#ff9f1c;line-height:1.8;}
+</style>
+</head>
+<body>
+<canvas id="wc" style="display:none;"></canvas>
+<video id="vWorker" style="display:none;" muted playsinline preload="auto"></video>
+<textarea id="copyTA" readonly></textarea>
+
+<div class="wrap">
+  <div class="hdr">
+    <h1>IMAGE / VIDEO / GIF → HTML · SVG · XML · JSON</h1>
+    <p>Real Pixel Code · 3D JSON · GIF Frames · Custom JSON · Zero APIs</p>
+    <span class="badge">✔ GIF FRAMES · FULL VIDEO · 3D JSON · CUSTOM JSON · ANDROID READY</span>
+  </div>
+
+  <!-- MODE BUTTONS -->
+  <div class="mode-row">
+    <button class="mode-btn on" id="modeImg" onclick="setMode('image')">🖼 IMAGE</button>
+    <button class="mode-btn video-mode" id="modeVid" onclick="setMode('video')">🎬 VIDEO</button>
+    <button class="mode-btn gif-mode" id="modeGif" onclick="setMode('gif')">🎞 GIF</button>
+  </div>
+
+  <!-- FILE PICKER -->
+  <div class="pick-wrap">
+    <div class="pick-btn" id="pickBtn">
+      <span class="ico">📂</span>
+      <div class="mt">Tap Karein — Gallery se File Select Karein</div>
+      <div class="st" id="pickSt">PNG · JPG · WEBP · GIF · BMP</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <!-- IMAGE OPTIONS -->
+  <div id="imageOpts">
+    <div class="opts">
+      <div class="ob"><label>Resolution</label>
+        <select id="resOpt">
+          <option value="20">20×20 Ultra Fast</option>
+          <option value="30">30×30 Fastest</option>
+          <option value="50" selected>50×50 Balanced</option>
+          <option value="80">80×80 Detailed</option>
+          <option value="120">120×120 Fine</option>
+          <option value="200">200×200 Max</option>
+        </select></div>
+      <div class="ob"><label>HTML Style</label>
+        <select id="htmlStyle">
+          <option value="div">DIV Grid</option>
+          <option value="table">TABLE cells</option>
+          <option value="span">SPAN inline</option>
+        </select></div>
+      <div class="ob"><label>SVG Style</label>
+        <select id="svgStyle">
+          <option value="rect">RECT pixels</option>
+          <option value="circle">CIRCLE pixels</option>
+          <option value="embed">Embedded Base64</option>
+        </select></div>
+      <div class="ob"><label>Pixel Size</label>
+        <select id="pixelSize">
+          <option value="4">4px</option>
+          <option value="6" selected>6px</option>
+          <option value="8">8px</option>
+          <option value="10">10px</option>
+        </select></div>
+    </div>
+  </div>
+
+  <!-- VIDEO OPTIONS -->
+  <div class="video-opts" id="videoOpts">
+    <label>🎬 Video JSON Options</label>
+    <div class="vopt-grid">
+      <div class="vopt-item">
+        <label>Frame Resolution</label>
+        <select id="vResOpt">
+          <option value="16">16×16 Fastest</option>
+          <option value="24">24×24 Fast</option>
+          <option value="32" selected>32×32 Balanced</option>
+          <option value="48">48×48 Detailed</option>
+          <option value="64">64×64 Fine</option>
+        </select>
+      </div>
+      <div class="vopt-item">
+        <label>Max Frames</label>
+        <select id="vMaxFrames">
+          <option value="10">10 frames</option>
+          <option value="20">20 frames</option>
+          <option value="30" selected>30 frames</option>
+          <option value="50">50 frames</option>
+          <option value="100">100 frames</option>
+          <option value="9999">ALL (Full Video)</option>
+        </select>
+      </div>
+      <div class="vopt-item">
+        <label>JSON Format</label>
+        <select id="vJsonFormat" onchange="onVFormatChange()">
+          <option value="lottie">🎭 Lottie (Sketchware)</option>
+          <option value="3d" selected>🧊 3D JSON (Full)</option>
+          <option value="frames">📋 Frame Array</option>
+          <option value="metadata">📊 With Metadata</option>
+          <option value="compact">⚡ Compact Hex</option>
+          <option value="base64">🔡 Base64 Frames</option>
+          <option value="custom">🛠 Custom Builder</option>
+        </select>
+      </div>
+      <div class="vopt-item">
+        <label>Frame Interval</label>
+        <select id="vInterval">
+          <option value="0.1">Every 0.1s (Max FPS)</option>
+          <option value="0.5">Every 0.5s</option>
+          <option value="1" selected>Every 1s</option>
+          <option value="2">Every 2s</option>
+          <option value="5">Every 5s</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CUSTOM JSON BUILDER — shows only when format=custom -->
+    <div class="custom-json-section" id="customJsonSection">
+      <label>🛠 CUSTOM JSON BUILDER — Choose Fields:</label>
+      <div class="cj-grid">
+        <div class="cj-item checked" id="cj_source" onclick="toggleCJ('source')">
+          <input type="checkbox" id="cb_source" checked> <label for="cb_source">source (filename)</label>
+        </div>
+        <div class="cj-item checked" id="cj_generated" onclick="toggleCJ('generated')">
+          <input type="checkbox" id="cb_generated" checked> <label for="cb_generated">generated (timestamp)</label>
+        </div>
+        <div class="cj-item checked" id="cj_duration" onclick="toggleCJ('duration')">
+          <input type="checkbox" id="cb_duration" checked> <label for="cb_duration">duration (seconds)</label>
+        </div>
+        <div class="cj-item checked" id="cj_fps" onclick="toggleCJ('fps')">
+          <input type="checkbox" id="cb_fps" checked> <label for="cb_fps">fps</label>
+        </div>
+        <div class="cj-item checked" id="cj_resolution" onclick="toggleCJ('resolution')">
+          <input type="checkbox" id="cb_resolution" checked> <label for="cb_resolution">resolution (w×h)</label>
+        </div>
+        <div class="cj-item checked" id="cj_totalFrames" onclick="toggleCJ('totalFrames')">
+          <input type="checkbox" id="cb_totalFrames" checked> <label for="cb_totalFrames">totalFrames</label>
+        </div>
+        <div class="cj-item checked" id="cj_frameTime" onclick="toggleCJ('frameTime')">
+          <input type="checkbox" id="cb_frameTime" checked> <label for="cb_frameTime">frame.time</label>
+        </div>
+        <div class="cj-item checked" id="cj_frameIndex" onclick="toggleCJ('frameIndex')">
+          <input type="checkbox" id="cb_frameIndex" checked> <label for="cb_frameIndex">frame.index</label>
+        </div>
+        <div class="cj-item checked" id="cj_rgb" onclick="toggleCJ('rgb')">
+          <input type="checkbox" id="cb_rgb" checked> <label for="cb_rgb">pixel r,g,b</label>
+        </div>
+        <div class="cj-item checked" id="cj_alpha" onclick="toggleCJ('alpha')">
+          <input type="checkbox" id="cb_alpha" checked> <label for="cb_alpha">pixel alpha</label>
+        </div>
+        <div class="cj-item" id="cj_hex" onclick="toggleCJ('hex')">
+          <input type="checkbox" id="cb_hex"> <label for="cb_hex">pixel hex (#rrggbb)</label>
+        </div>
+        <div class="cj-item" id="cj_avgColor" onclick="toggleCJ('avgColor')">
+          <input type="checkbox" id="cb_avgColor"> <label for="cb_avgColor">frame avgColor</label>
+        </div>
+        <div class="cj-item" id="cj_brightness" onclick="toggleCJ('brightness')">
+          <input type="checkbox" id="cb_brightness"> <label for="cb_brightness">pixel brightness</label>
+        </div>
+        <div class="cj-item" id="cj_depth" onclick="toggleCJ('depth')">
+          <input type="checkbox" id="cb_depth"> <label for="cb_depth">pixel depth (3D z)</label>
+        </div>
+        <div class="cj-item" id="cj_3dCoords" onclick="toggleCJ('3dCoords')">
+          <input type="checkbox" id="cb_3dCoords"> <label for="cb_3dCoords">3D x,y,z coords</label>
+        </div>
+        <div class="cj-item" id="cj_normal" onclick="toggleCJ('normal')">
+          <input type="checkbox" id="cb_normal"> <label for="cb_normal">3D normal vector</label>
+        </div>
+      </div>
+      <div class="cj-key-wrap">
+        <label>Custom Root Key Name (optional):</label>
+        <input type="text" id="cjRootKey" placeholder='e.g. "videoData" (default: video3d)' value="">
+      </div>
+      <div class="cj-key-wrap" style="margin-top:6px;">
+        <label>Custom Frames Array Key:</label>
+        <input type="text" id="cjFramesKey" placeholder='e.g. "frames" or "animation"' value="frames">
+      </div>
+    </div>
+  </div>
+
+  <div class="vprog-info" id="vprogInfo"></div>
+
+  <!-- GIF OPTIONS -->
+  <div class="gif-opts" id="gifOpts">
+    <label>🎞 GIF → JSON / HTML Options</label>
+    <div class="gopt-grid">
+      <div class="gopt-item">
+        <label>Frame Resolution</label>
+        <select id="gResOpt">
+          <option value="16">16×16 Fastest</option>
+          <option value="24">24×24 Fast</option>
+          <option value="32" selected>32×32 Balanced</option>
+          <option value="48">48×48 Detailed</option>
+          <option value="64">64×64 Fine</option>
+        </select>
+      </div>
+      <div class="gopt-item">
+        <label>Max Frames</label>
+        <select id="gMaxFrames">
+          <option value="5">5 frames</option>
+          <option value="10" selected>10 frames</option>
+          <option value="20">20 frames</option>
+          <option value="30">30 frames</option>
+          <option value="9999">ALL frames</option>
+        </select>
+      </div>
+      <div class="gopt-item">
+        <label>Output Format</label>
+        <select id="gOutFormat">
+          <option value="json_frames">📦 JSON Frame Array</option>
+          <option value="json_3d">🧊 JSON 3D (z-depth)</option>
+          <option value="json_hex">🎨 JSON Hex Colors</option>
+          <option value="json_compact">⚡ JSON Compact</option>
+          <option value="html_anim">🌐 HTML Animated</option>
+          <option value="html_frames">🌐 HTML All Frames</option>
+          <option value="both">🔀 Both JSON + HTML</option>
+        </select>
+      </div>
+      <div class="gopt-item">
+        <label>Pixel Size (HTML)</label>
+        <select id="gPixelSize">
+          <option value="4">4px</option>
+          <option value="6" selected>6px</option>
+          <option value="8">8px</option>
+          <option value="10">10px</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="gif-info" id="gifInfo"></div>
+
+  <button class="cvt" id="cvtBtn" disabled>⚡ CONVERT → HTML · SVG · XML · JSON</button>
+  <div class="prog" id="prog"><div class="pf" id="pf"></div></div>
+
+  <!-- PREVIEW -->
+  <div class="prev" id="prev">
+    <img id="prevImg" src="" alt="" style="display:none;">
+    <video id="prevVid" style="display:none;" controls muted playsinline></video>
+    <div class="pinfo" id="pinfo"></div>
+  </div>
+
+  <!-- RESULT TABS -->
+  <div id="resultArea" style="display:none;">
+    <div class="tabs" id="tabBar">
+      <button class="tab on"       id="tabHtml" onclick="switchTab('html',this)">🌐 HTML</button>
+      <button class="tab"          id="tabSvg"  onclick="switchTab('svg',this)">🎨 SVG</button>
+      <button class="tab xml-tab"  id="tabXml"  onclick="switchTab('xml',this)">📄 XML</button>
+      <button class="tab json-tab" id="tabJson" onclick="switchTab('json',this)">📦 JSON</button>
+    </div>
+
+    <!-- HTML Panel -->
+    <div class="panel" id="htmlPanel">
+      <div class="chdr">
+        <span class="clabel">HTML Pixel Code</span>
+        <div class="brow">
+          <button class="abtn cbtn" id="copyHtml" onclick="doCopy('html')">[ COPY ]</button>
+          <button class="abtn dbtn" onclick="doDl('html')">⬇ .html</button>
+          <button class="abtn dbtn" onclick="doDl('htmltxt')">⬇ .txt</button>
+        </div>
+      </div>
+      <div class="gif-html-info" id="gifHtmlInfo">
+        🎞 <b>GIF Animated HTML — Use Guide:</b><br>
+        • Yeh HTML file ek animated pixel art hai<br>
+        • Browser mein open karo — GIF jaise chalega<br>
+        • CSS <code style="color:#ff9f1c;">@keyframes</code> se animate hoga<br>
+        • Download karke kisi bhi webpage mein embed karo
+      </div>
+      <div class="codebox" id="htmlCode"></div>
+      <div class="stats" id="htmlStats"></div>
+    </div>
+
+    <!-- SVG Panel -->
+    <div class="panel" id="svgPanel" style="display:none;">
+      <div class="chdr">
+        <span class="clabel">SVG Pixel Code</span>
+        <div class="brow">
+          <button class="abtn cbtn" id="copySvg" onclick="doCopy('svg')">[ COPY ]</button>
+          <button class="abtn dbtn" onclick="doDl('svg')">⬇ .svg</button>
+          <button class="abtn dbtn" onclick="doDl('svgtxt')">⬇ .txt</button>
+        </div>
+      </div>
+      <div class="svgPreviewWrap" id="svgPreviewWrap">
+        <div style="font-size:.58rem;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">🖼 Live SVG Preview</div>
+        <img id="svgLivePreview" style="max-width:100%;max-height:180px;border:1px solid var(--accent);border-radius:8px;background:#111;display:none;" alt="">
+        <div style="font-size:.58rem;color:var(--muted);margin-top:4px;">⚠ Codebox mein truncated — Copy/Download se full milega</div>
+      </div>
+      <div class="codebox" id="svgCode"></div>
+      <div class="stats" id="svgStats"></div>
+    </div>
+
+    <!-- XML Panel -->
+    <div class="panel" id="xmlPanel" style="display:none;">
+      <div class="chdr">
+        <span class="clabel" style="color:var(--yellow);">XML Pixel Code</span>
+        <div class="brow">
+          <button class="abtn cbtn" id="copyXml" onclick="doCopy('xml')">[ COPY ]</button>
+          <button class="abtn xbtn" onclick="doDl('xml')">⬇ .xml</button>
+          <button class="abtn xbtn" onclick="doDl('xmltxt')">⬇ .txt</button>
+        </div>
+      </div>
+      <div class="xml-style-row">
+        <label>XML Format:</label>
+        <select id="xmlStyleSel" onchange="rebuildXml()">
+          <option value="pixeldata">PixelData (custom)</option>
+          <option value="android">Android Drawable</option>
+          <option value="android-vector">Android Vector Drawable</option>
+          <option value="svg-xml">SVG as XML</option>
+          <option value="rss">RSS/Atom style</option>
+          <option value="kml">KML/GeoData style</option>
+        </select>
+      </div>
+      <div class="codebox" id="xmlCode"></div>
+      <div class="stats" id="xmlStats"></div>
+    </div>
+
+    <!-- JSON Panel -->
+    <div class="panel" id="jsonPanel" style="display:none;">
+      <div class="chdr">
+        <span class="clabel" style="color:var(--green);">JSON Data</span>
+        <div class="brow">
+          <button class="abtn jbtn" id="copyJson" onclick="doCopy('json')">[ COPY ]</button>
+          <button class="abtn jbtn" onclick="doDl('json')">⬇ .json</button>
+          <button class="abtn jbtn" onclick="doDl('jsontxt')">⬇ .txt</button>
+        </div>
+      </div>
+      <div class="lottie-info" id="lottieInfoBox">
+        🎭 <b>Lottie Format — Sketchware Use Guide:</b><br>
+        1. Yeh <b>.json</b> file download karo<br>
+        2. Sketchware → <b>assets</b> folder mein rakho<br>
+        3. Layout mein <b>LottieAnimationView</b> add karo<br>
+        4. Code mein: <code style="color:var(--green);">lottieView.setAnimation("pixel.json");</code><br>
+        5. <code style="color:var(--green);">lottieView.playAnimation();</code>
+      </div>
+      <div class="json-format-row" id="imgJsonFormatRow">
+        <label>JSON Format:</label>
+        <select id="jsonFormatSel" onchange="rebuildJson()">
+          <option value="full">Full RGB Array</option>
+          <option value="hex">Hex Colors</option>
+          <option value="compact">Compact (flat)</option>
+          <option value="css">CSS Variables</option>
+        </select>
+      </div>
+      <div class="codebox" id="jsonCode"></div>
+      <div class="stats" id="jsonStats"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// GLOBALS
+// ══════════════════════════════════════════════
+var canvas  = document.getElementById('wc');
+var ctx     = canvas.getContext('2d');
+var vWorker = document.getElementById('vWorker');
+
+var htmlOut='', svgOut='', xmlOut='', jsonOut='';
+var curFile=null, curPixels=[], curRes=50, curPs=6;
+var curMode='image';
+var videoJsonOut='';
+var gifHtmlOut='', gifJsonOut='', gifFramesData=[];
+
+// ══════════════════════════════════════════════
+// ANDROID BRIDGE — Copy
+// ══════════════════════════════════════════════
+function androidCopy(text, cb) {
+  if(window.Android && typeof window.Android.copyToClipboard==='function') {
+    try { window.Android.copyToClipboard(text); cb(); return; } catch(e){}
+  }
+  var ta=document.getElementById('copyTA');
+  ta.value=text;
+  ta.style.cssText='position:fixed;top:0;left:0;width:100%;height:60px;opacity:0.01;z-index:9999;font-size:14px;';
+  ta.removeAttribute('readonly'); ta.focus(); ta.select();
+  try{ ta.setSelectionRange(0,text.length); }catch(e){}
+  var ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  ta.style.cssText='position:fixed;top:-9999px;opacity:0;';
+  ta.setAttribute('readonly','');
+  if(ok){ cb(); return; }
+  showToast('❌ Copy failed');
+}
+
+// ══════════════════════════════════════════════
+// ANDROID BRIDGE — Download (chunk-based for large files)
+// ══════════════════════════════════════════════
+function androidDownload(content, filename, mimeType) {
+  if(window.Android && typeof window.Android.saveFile==='function') {
+    try {
+      var CHUNK = 512 * 1024; // 512KB chunks — safe under Binder 1MB limit
+      if(content.length <= CHUNK) {
+        window.Android.saveFile(filename, content, mimeType);
+      } else {
+        var total = Math.ceil(content.length / CHUNK);
+        window.Android.saveFileBegin(filename, mimeType, total);
+        for(var i = 0; i < total; i++) {
+          window.Android.saveFileChunk(i, content.slice(i * CHUNK, (i+1) * CHUNK));
+        }
+        window.Android.saveFileEnd();
+      }
+      return;
+    } catch(e) { showToast('❌ Save error: ' + e.message); return; }
+  }
+  // Browser fallback
+  try {
+    var uri='data:'+mimeType+';charset=utf-8,'+encodeURIComponent(content);
+    var a=document.createElement('a'); a.href=uri; a.download=filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); },800);
+    showToast('⬇ '+filename+' download ho raha hai...');
+  } catch(e2){ showToast('❌ Download failed: '+e2.message); }
+}
+
+// ══════════════════════════════════════════════
+// MODE TOGGLE
+// ══════════════════════════════════════════════
+function setMode(m) {
+  curMode=m;
+  document.getElementById('modeImg').classList.toggle('on', m==='image');
+  document.getElementById('modeVid').classList.toggle('on', m==='video');
+  document.getElementById('modeGif').classList.toggle('on', m==='gif');
+  document.getElementById('imageOpts').style.display = m==='image'?'':'none';
+  document.getElementById('videoOpts').classList.toggle('on', m==='video');
+  document.getElementById('gifOpts').classList.toggle('on', m==='gif');
+
+  var fi=document.getElementById('fileInput');
+  if(m==='image') fi.accept='image/*';
+  else if(m==='video') fi.accept='video/*';
+  else fi.accept='image/gif';
+
+  document.getElementById('pickSt').textContent = m==='image'?'PNG · JPG · WEBP · GIF · BMP':m==='video'?'MP4 · WEBM · MOV · AVI · 3GP':'GIF (Animated) Only';
+  document.getElementById('pickBtn').querySelector('.ico').textContent = m==='image'?'📂':m==='video'?'🎬':'🎞';
+  document.getElementById('pickBtn').querySelector('.mt').textContent = m==='image'?'Tap Karein — Gallery se Image Select Karein':m==='video'?'Tap Karein — Gallery se Video Select Karein':'Tap Karein — Animated GIF Select Karein';
+
+  var btn=document.getElementById('cvtBtn');
+  if(m==='video'){
+    btn.textContent='⚡ VIDEO → 3D JSON CONVERT';
+    btn.classList.remove('gif-active');
+    btn.classList.add('video-active');
+  } else if(m==='gif'){
+    btn.textContent='⚡ GIF → JSON · HTML CONVERT';
+    btn.classList.remove('video-active');
+    btn.classList.add('gif-active');
+  } else {
+    btn.textContent='⚡ CONVERT → HTML · SVG · XML · JSON';
+    btn.classList.remove('video-active');
+    btn.classList.remove('gif-active');
+  }
+
+  curFile=null; btn.disabled=true;
+  document.getElementById('prev').classList.remove('on');
+  document.getElementById('resultArea').style.display='none';
+  ['tabHtml','tabSvg','tabXml'].forEach(function(id){
+    document.getElementById(id).style.display = m==='video'?'none':'';
+  });
+  if(m==='gif'){
+    document.getElementById('tabSvg').style.display='none';
+    document.getElementById('tabXml').style.display='none';
+  }
+}
+
+function onVFormatChange() {
+  var fmt=document.getElementById('vJsonFormat').value;
+  document.getElementById('customJsonSection').classList.toggle('on', fmt==='custom');
+}
+
+function toggleCJ(key) {
+  var cb=document.getElementById('cb_'+key);
+  var item=document.getElementById('cj_'+key);
+  cb.checked=!cb.checked;
+  item.classList.toggle('checked', cb.checked);
+}
+
+// ══════════════════════════════════════════════
+// FILE INPUT
+// ══════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', function(e){
+  var f=e.target.files&&e.target.files[0];
+  if(f) loadFile(f);
+  e.target.value='';
+});
+
+function loadFile(f) {
+  curFile=f;
+  document.getElementById('cvtBtn').disabled=false;
+  var r=new FileReader();
+  r.onload=function(ev){
+    if(curMode==='image'||curMode==='gif'){
+      var img=new Image();
+      img.onload=function(){
+        document.getElementById('prevImg').src=ev.target.result;
+        document.getElementById('prevImg').style.display='';
+        document.getElementById('prevVid').style.display='none';
+        document.getElementById('pinfo').innerHTML=
+          '<b>Naam:</b> '+f.name+'<br>'+
+          '<b>Size:</b> '+(f.size/1024).toFixed(1)+' KB<br>'+
+          '<b>Type:</b> '+f.type+'<br>'+
+          '<b>W×H:</b> '+img.width+'×'+img.height+' px'+(curMode==='gif'?'<br><b>Mode:</b> GIF Frame Extractor':'');
+        document.getElementById('prev').classList.add('on');
+      };
+      img.src=ev.target.result;
+    } else {
+      var pv=document.getElementById('prevVid');
+      pv.src=ev.target.result; pv.style.display='';
+      document.getElementById('prevImg').style.display='none';
+      pv.onloadedmetadata=function(){
+        document.getElementById('pinfo').innerHTML=
+          '<b>Naam:</b> '+f.name+'<br>'+
+          '<b>Size:</b> '+(f.size/1024/1024).toFixed(2)+' MB<br>'+
+          '<b>Type:</b> '+f.type+'<br>'+
+          '<b>Duration:</b> '+pv.duration.toFixed(1)+'s<br>'+
+          '<b>W×H:</b> '+pv.videoWidth+'×'+pv.videoHeight+' px';
+      };
+      document.getElementById('prev').classList.add('on');
+    }
+  };
+  r.readAsDataURL(f);
+  document.getElementById('pickBtn').querySelector('.mt').textContent='✅ '+f.name;
+  document.getElementById('pickBtn').querySelector('.st').textContent=(f.size/1024).toFixed(1)+' KB · '+f.type;
+  document.getElementById('resultArea').style.display='none';
+  htmlOut=''; svgOut=''; xmlOut=''; jsonOut=''; videoJsonOut=''; curPixels=[];
+  gifHtmlOut=''; gifJsonOut=''; gifFramesData=[];
+}
+
+// ══════════════════════════════════════════════
+// CONVERT BUTTON
+// ══════════════════════════════════════════════
+document.getElementById('cvtBtn').addEventListener('click', function(){
+  if(curFile){ if(curMode==='video') doVideoConvert(); else if(curMode==='gif') doGifConvert(); else doConvert(); }
+});
+
+// ══════════════════════════════════════════════
+// IMAGE CONVERT
+// ══════════════════════════════════════════════
+function doConvert() {
+  var btn=document.getElementById('cvtBtn');
+  btn.disabled=true; setP(5);
+  curRes=+document.getElementById('resOpt').value;
+  var hs=document.getElementById('htmlStyle').value;
+  var ss=document.getElementById('svgStyle').value;
+  curPs=+document.getElementById('pixelSize').value;
+  var xs=document.getElementById('xmlStyleSel').value;
+  var jf=document.getElementById('jsonFormatSel').value;
+  var r=new FileReader();
+  r.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      setP(20);
+      canvas.width=curRes; canvas.height=curRes;
+      ctx.drawImage(img,0,0,curRes,curRes);
+      setP(35);
+      var id=ctx.getImageData(0,0,curRes,curRes).data;
+      curPixels=[];
+      for(var y=0;y<curRes;y++){
+        var row=[];
+        for(var x=0;x<curRes;x++){
+          var i=(y*curRes+x)*4;
+          row.push({r:id[i],g:id[i+1],b:id[i+2],a:id[i+3]});
+        }
+        curPixels.push(row);
+      }
+      setP(50);
+      htmlOut=buildHtml(curPixels,curRes,curPs,hs);
+      setP(63);
+      if(ss==='embed') svgOut=svgEmbed(ev.target.result, img.naturalWidth||img.width, img.naturalHeight||img.height);
+      else svgOut=buildSvg(curPixels,curRes,curPs,ss);
+      setP(76);
+      xmlOut=buildXml(curPixels,curRes,curPs,xs,curFile.name);
+      setP(88);
+      jsonOut=buildJson(curPixels,curRes,curPs,jf,curFile.name);
+      setP(100);
+      setTimeout(function(){ showRes(); btn.disabled=false; setP(0,false); },300);
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(curFile);
+}
+
+// ══════════════════════════════════════════════
+// VIDEO CONVERT — FIXED SEEK + 150ms WAIT
+// Root cause fix:
+//   1. onseeked assigned INSIDE captureNext BEFORE setting currentTime
+//   2. 150ms timeout — mobile WebView decode time ke liye
+//   3. Full video duration support (maxFrames=9999)
+// ══════════════════════════════════════════════
+function doVideoConvert() {
+  var btn=document.getElementById('cvtBtn');
+  btn.disabled=true; setP(5);
+  var vRes=+document.getElementById('vResOpt').value;
+  var maxFrames=+document.getElementById('vMaxFrames').value;
+  var vFormat=document.getElementById('vJsonFormat').value;
+  var interval=+document.getElementById('vInterval').value;
+  var vpInfo=document.getElementById('vprogInfo');
+  vpInfo.classList.add('on');
+  vpInfo.textContent='🎬 Video load ho raha hai...';
+
+  var r=new FileReader();
+  r.onload=function(ev){
+    var vid=vWorker;
+    // Reset video element completely
+    vid.pause();
+    vid.removeAttribute('src');
+    vid.load();
+
+    vid.src=ev.target.result;
+    vid.load();
+
+    vid.onloadedmetadata=function(){
+      var duration=vid.duration;
+      if(!isFinite(duration) || duration<=0){
+        vpInfo.textContent='❌ Video duration detect nahi hua. Doosra format try karein.';
+        btn.disabled=false; setP(0,false); return;
+      }
+
+      // Build frame times — full duration support
+      var times=[];
+      for(var t=0; t<duration; t+=interval){
+        times.push(parseFloat(t.toFixed(3)));
+        if(maxFrames!==9999 && times.length>=maxFrames) break;
+      }
+      // Always include last frame
+      if(times[times.length-1] < duration-0.05){
+        times.push(parseFloat((duration-0.05).toFixed(3)));
+      }
+
+      vpInfo.innerHTML='🎬 Duration: <b>'+duration.toFixed(1)+'s</b> · Frames: <b>'+times.length+'</b> · Interval: <b>'+interval+'s</b><br>⏳ Capturing...';
+      setP(15);
+
+      var frames=[];
+      var idx=0;
+
+      function captureNext(){
+        if(idx>=times.length){
+          // ALL frames captured
+          setP(90);
+          vpInfo.textContent='📦 JSON build ho raha hai ('+frames.length+' frames)...';
+          videoJsonOut=buildVideoJson(frames, vRes, vFormat, curFile.name, duration, interval);
+          jsonOut=videoJsonOut;
+          setP(100);
+          setTimeout(function(){
+            showVideoRes();
+            btn.disabled=false;
+            setP(0,false);
+            vpInfo.innerHTML='✅ <b>'+frames.length+' frames</b> captured · Duration: <b>'+duration.toFixed(1)+'s</b> · Format: <b>'+vFormat.toUpperCase()+'</b>';
+          },300);
+          return;
+        }
+
+        // ── FIX: handler pehle, PHIR seek ──
+        vid.onseeked=function(){
+          vid.onseeked=null; // prevent double-fire
+
+          canvas.width=vRes; canvas.height=vRes;
+          ctx.clearRect(0,0,vRes,vRes);
+          ctx.drawImage(vid,0,0,vRes,vRes);
+
+          var imgData=ctx.getImageData(0,0,vRes,vRes).data;
+          var pixels=[];
+          for(var y=0;y<vRes;y++){
+            var row=[];
+            for(var x=0;x<vRes;x++){
+              var i2=(y*vRes+x)*4;
+              row.push({r:imgData[i2],g:imgData[i2+1],b:imgData[i2+2],a:imgData[i2+3]});
+            }
+            pixels.push(row);
+          }
+          frames.push({time:times[idx], index:idx, pixels:pixels});
+          vpInfo.innerHTML='🎬 Frame <b>'+(idx+1)+'</b>/'+times.length+' · t=<b>'+times[idx]+'s</b>';
+          setP(15+Math.round((idx/times.length)*72));
+          idx++;
+          // ── FIX: 150ms wait — mobile WebView video decode ke liye ──
+          setTimeout(captureNext, 150);
+        };
+
+        // Seek karo
+        vid.currentTime=times[idx];
+      }
+
+      vid.onerror=function(){
+        vpInfo.textContent='❌ Video error. Format supported nahi hai.';
+        btn.disabled=false; setP(0,false);
+      };
+
+      captureNext();
+    };
+  };
+  r.readAsDataURL(curFile);
+}
+
+// ══════════════════════════════════════════════
+// GIF CONVERT — omggif based proper frame decoder
+// ══════════════════════════════════════════════
+function doGifConvert() {
+  var btn=document.getElementById('cvtBtn');
+  btn.disabled=true; setP(5);
+  var gRes=+document.getElementById('gResOpt').value;
+  var maxFrames=+document.getElementById('gMaxFrames').value;
+  var outFormat=document.getElementById('gOutFormat').value;
+  var gPs=+document.getElementById('gPixelSize').value;
+  var gifInfo=document.getElementById('gifInfo');
+  gifInfo.classList.add('on');
+  gifInfo.textContent='🎞 GIF load ho raha hai...';
+
+  var r=new FileReader();
+  r.onload=function(ev){
+    var arrayBuf=ev.target.result;
+    var uint8=new Uint8Array(arrayBuf);
+    gifInfo.textContent='⚙ GIF binary parse ho raha hai...'; setP(15);
+
+    try {
+      var frames=parseGifBinary(uint8, maxFrames, gRes);
+      if(!frames||frames.length===0) throw new Error('no frames');
+      gifInfo.innerHTML='✅ <b>'+frames.length+'</b> frames extracted! Building output...';
+      setP(80);
+      finishGif(frames,gRes,gPs,outFormat,gifInfo,btn);
+    } catch(e) {
+      gifInfo.textContent='⚠ GIF parse failed ('+e.message+'), single frame fallback...';
+      // Fallback via FileReader dataURL
+      var r2=new FileReader();
+      r2.onload=function(ev2){
+        var img2=new Image();
+        img2.onload=function(){
+          canvas.width=gRes; canvas.height=gRes;
+          ctx.drawImage(img2,0,0,gRes,gRes);
+          var id=ctx.getImageData(0,0,gRes,gRes).data;
+          var px=[];
+          for(var y=0;y<gRes;y++){var row=[];for(var x=0;x<gRes;x++){var i=(y*gRes+x)*4;row.push({r:id[i],g:id[i+1],b:id[i+2],a:id[i+3]});}px.push(row);}
+          finishGif([{index:0,time:0,delay:100,pixels:px}],gRes,gPs,outFormat,gifInfo,btn);
+        };
+        img2.onerror=function(){gifInfo.textContent='❌ GIF load error.';btn.disabled=false;setP(0,false);};
+        img2.src=ev2.target.result;
+      };
+      r2.readAsDataURL(curFile);
+    }
+  };
+  r.readAsArrayBuffer(curFile);
+}
+
+// ── Full GIF binary parser — pure JS, no library ──
+function parseGifBinary(uint8, maxFrames, gRes) {
+  var pos=0;
+  function r8(){return uint8[pos++];}
+  function r16(){var v=uint8[pos]|(uint8[pos+1]<<8);pos+=2;return v;}
+  function skipSubBlocks(){var n;do{n=r8();pos+=n;}while(n>0&&pos<uint8.length);}
+
+  // GIF header check
+  var sig=String.fromCharCode(uint8[0],uint8[1],uint8[2]);
+  if(sig!=='GIF') throw new Error('Not GIF');
+  pos=6;
+
+  // Logical Screen Descriptor
+  var gWidth=r16(), gHeight=r16();
+  var lsdPacked=r8();
+  r8(); r8(); // bg color index, pixel aspect ratio
+  var gct=null;
+  if(lsdPacked&0x80){
+    var gctLen=3*(2<<(lsdPacked&0x07));
+    gct=uint8.slice(pos, pos+gctLen);
+    pos+=gctLen;
+  }
+
+  // Pure RGBA pixel buffer — no canvas needed for compositing
+  // comp[y*gWidth+x] = {r,g,b,a}
+  var comp=new Array(gWidth*gHeight);
+  for(var ci2=0;ci2<comp.length;ci2++) comp[ci2]={r:0,g:0,b:0,a:0};
+  var prev=null; // snapshot for disposal=3
+
+  var frames=[];
+  var delay=100, disposal=0, transpIdx=-1;
+
+  while(pos<uint8.length && frames.length<maxFrames){
+    var b=r8();
+    if(b===0x3B) break; // GIF trailer
+
+    if(b===0x21){ // Extension
+      var label=r8();
+      if(label===0xF9){ // Graphic Control Extension
+        r8(); // block size (always 4)
+        var gcePacked=r8();
+        disposal=(gcePacked>>2)&0x07;
+        var hasTransp=!!(gcePacked&0x01);
+        delay=r16()*10;
+        if(delay<20) delay=100;
+        var tIdx=r8();
+        transpIdx=hasTransp?tIdx:-1;
+        r8(); // block terminator
+      } else {
+        skipSubBlocks();
+      }
+      continue;
+    }
+
+    if(b===0x2C){ // Image Descriptor
+      var imgLeft=r16(), imgTop=r16(), imgW=r16(), imgH=r16();
+      var imgPacked=r8();
+      var hasLCT=!!(imgPacked&0x80);
+      var interlaced=!!(imgPacked&0x40);
+      var lct=null;
+      if(hasLCT){
+        var lctLen=3*(2<<(imgPacked&0x07));
+        lct=uint8.slice(pos, pos+lctLen);
+        pos+=lctLen;
+      }
+      var colorTable=lct||gct;
+
+      // Read LZW sub-blocks
+      var minLzw=r8();
+      var compressed=[];
+      var bSize;
+      do{
+        bSize=r8();
+        for(var bi=0;bi<bSize;bi++) compressed.push(uint8[pos++]);
+      }while(bSize>0&&pos<uint8.length);
+
+      // Decode pixel indices
+      var indices=gifLzwDecode(minLzw, compressed, imgW*imgH);
+      if(interlaced) indices=gifDeinterlace(indices, imgW, imgH);
+
+      // Snapshot for disposal=3
+      if(disposal===3 && prev){
+        comp=prev.slice();
+      } else if(disposal===2){
+        // clear region to transparent
+        for(var dy=imgTop;dy<imgTop+imgH;dy++){
+          for(var dx=imgLeft;dx<imgLeft+imgW;dx++){
+            comp[dy*gWidth+dx]={r:0,g:0,b:0,a:0};
+          }
+        }
+      }
+      // Save snapshot before painting (for next frame's disposal=3)
+      prev=comp.slice();
+
+      // Paint indices onto comp buffer
+      for(var p=0;p<indices.length;p++){
+        var pidx=indices[p];
+        var px2=imgLeft+(p%imgW);
+        var py2=imgTop+Math.floor(p/imgW);
+        if(px2>=gWidth||py2>=gHeight) continue;
+        if(pidx===transpIdx) continue; // keep existing pixel
+        var cb3=pidx*3;
+        comp[py2*gWidth+px2]={
+          r:colorTable?colorTable[cb3]:0,
+          g:colorTable?colorTable[cb3+1]:0,
+          b:colorTable?colorTable[cb3+2]:0,
+          a:255
+        };
+      }
+
+      // Scale comp buffer down to gRes×gRes using nearest-neighbor
+      var px=[];
+      for(var gy=0;gy<gRes;gy++){
+        var row=[];
+        var srcY=Math.floor(gy*gHeight/gRes);
+        for(var gx=0;gx<gRes;gx++){
+          var srcX=Math.floor(gx*gWidth/gRes);
+          var c=comp[srcY*gWidth+srcX]||{r:0,g:0,b:0,a:255};
+          row.push({r:c.r,g:c.g,b:c.b,a:c.a});
+        }
+        px.push(row);
+      }
+
+      var cumMs=0;
+      frames.forEach(function(f){cumMs+=f.delay;});
+      frames.push({index:frames.length, time:parseFloat((cumMs/1000).toFixed(3)), delay:delay, pixels:px});
+
+      // Reset per-frame GCE values
+      delay=100; disposal=0; transpIdx=-1;
+      continue;
+    }
+
+    // Unknown block — skip
+    skipSubBlocks();
+  }
+  return frames;
+}
+
+// GIF LZW decoder — returns Array of color indices
+function gifLzwDecode(minCodeSize, data, totalPixels) {
+  var clearCode=1<<minCodeSize;
+  var eofCode=clearCode+1;
+  var codeSize=minCodeSize+1;
+  var codeMask=(1<<codeSize)-1;
+
+  // Code table: array of Uint8Arrays for speed
+  var table=[];
+  function resetTable(){
+    table=[];
+    for(var n=0;n<clearCode+2;n++) table[n]=new Uint8Array([n]);
+  }
+  resetTable();
+
+  var output=new Uint8Array(totalPixels);
+  var outPos=0;
+  var bitBuf=0, bitLen=0, dataPos=0;
+
+  function readCode(){
+    while(bitLen<codeSize && dataPos<data.length){
+      bitBuf|=data[dataPos++]<<bitLen;
+      bitLen+=8;
+    }
+    var code=bitBuf&codeMask;
+    bitBuf>>>=codeSize;
+    bitLen-=codeSize;
+    return code;
+  }
+
+  var prevEntry=null;
+  while(outPos<totalPixels){
+    var code=readCode();
+    if(code===eofCode) break;
+    if(code===clearCode){
+      resetTable();
+      codeSize=minCodeSize+1;
+      codeMask=(1<<codeSize)-1;
+      prevEntry=null;
+      continue;
+    }
+    var entry;
+    if(code<table.length){
+      entry=table[code];
+    } else if(prevEntry && code===table.length){
+      // Special case: KwKwK
+      var ext2=new Uint8Array(prevEntry.length+1);
+      ext2.set(prevEntry); ext2[prevEntry.length]=prevEntry[0];
+      entry=ext2;
+    } else {
+      break; // corrupt
+    }
+    // Write entry to output
+    for(var ei=0;ei<entry.length&&outPos<totalPixels;ei++){
+      output[outPos++]=entry[ei];
+    }
+    // Add new code to table
+    if(prevEntry){
+      var newE=new Uint8Array(prevEntry.length+1);
+      newE.set(prevEntry); newE[prevEntry.length]=entry[0];
+      table.push(newE);
+      // Grow code size when table fills up
+      if(table.length===(1<<codeSize)&&codeSize<12){
+        codeSize++; codeMask=(1<<codeSize)-1;
+      }
+    }
+    prevEntry=entry;
+  }
+  return output;
+}
+
+// GIF interlace deinterlacer
+function gifDeinterlace(src, w, h) {
+  var out=new Uint8Array(src.length);
+  var passes=[{s:0,step:8},{s:4,step:8},{s:2,step:4},{s:1,step:2}];
+  var idx=0;
+  for(var p=0;p<passes.length;p++){
+    for(var row=passes[p].s;row<h;row+=passes[p].step){
+      for(var col=0;col<w;col++){
+        out[row*w+col]=src[idx++];
+      }
+    }
+  }
+  return out;
+}
+
+function finishGif(frames,gRes,gPs,outFormat,gifInfo,btn){
+  gifFramesData=frames;
+  var fname=curFile?curFile.name:'animation.gif';
+  var now=new Date().toISOString();
+
+  if(outFormat==='json_frames'||outFormat==='both'){
+    gifJsonOut=buildGifJson(frames,gRes,'frames',fname,now);
+  } else if(outFormat==='json_3d'){
+    gifJsonOut=buildGifJson(frames,gRes,'3d',fname,now);
+  } else if(outFormat==='json_hex'){
+    gifJsonOut=buildGifJson(frames,gRes,'hex',fname,now);
+  } else if(outFormat==='json_compact'){
+    gifJsonOut=buildGifJson(frames,gRes,'compact',fname,now);
+  }
+  if(outFormat!=='json_frames'&&outFormat!=='json_3d'&&outFormat!=='json_hex'&&outFormat!=='json_compact'){
+    gifJsonOut='';
+  }
+
+  if(outFormat==='html_anim'||outFormat==='both'){
+    gifHtmlOut=buildGifHtml(frames,gRes,gPs,'animated',fname);
+  } else if(outFormat==='html_frames'){
+    gifHtmlOut=buildGifHtml(frames,gRes,gPs,'all_frames',fname);
+  } else {
+    gifHtmlOut='';
+  }
+
+  // For both: show json in JSON tab, html in HTML tab
+  if(outFormat==='both'){
+    jsonOut=gifJsonOut;
+    htmlOut=gifHtmlOut;
+  } else if(outFormat.startsWith('json')){
+    jsonOut=gifJsonOut;
+    gifHtmlOut='';
+  } else {
+    htmlOut=gifHtmlOut;
+    gifJsonOut='';
+  }
+
+  setP(100);
+  setTimeout(function(){
+    showGifRes(outFormat,frames.length,gRes);
+    btn.disabled=false;
+    setP(0,false);
+    gifInfo.innerHTML='✅ Done! <b>'+frames.length+'</b> frames · <b>'+gRes+'×'+gRes+'</b> resolution · Format: <b>'+outFormat.toUpperCase()+'</b>';
+  },300);
+}
+
+
+
+// ══════════════════════════════════════════════
+// BUILD GIF JSON
+// ══════════════════════════════════════════════
+function buildGifJson(frames, res, type, fname, now){
+  if(type==='compact'){
+    var obj={src:fname,ts:now,res:res,totalFrames:frames.length,frames:[]};
+    frames.forEach(function(f){
+      var flat=[];
+      f.pixels.forEach(function(row){row.forEach(function(p){flat.push(p.r,p.g,p.b,p.a);});});
+      obj.frames.push({i:f.index,t:f.time,d:f.delay,px:flat});
+    });
+    return JSON.stringify(obj);
+  }
+  if(type==='hex'){
+    return JSON.stringify({
+      source:fname,generated:now,resolution:res+'x'+res,totalFrames:frames.length,
+      frames:frames.map(function(f){
+        return {index:f.index,time:f.time,delayMs:f.delay,
+          pixels:f.pixels.map(function(row){return row.map(function(p){return '#'+h2(p.r)+h2(p.g)+h2(p.b);});})};
+      })
+    },null,2);
+  }
+  if(type==='3d'){
+    var obj3={gif3d:{metadata:{source:fname,generated:now,resolution:{width:res,height:res},totalFrames:frames.length,depthMethod:'brightness-based'},frames:[]}};
+    frames.forEach(function(f,fi){
+      var px3d=[];
+      for(var y=0;y<res;y++){
+        for(var x=0;x<res;x++){
+          var p=f.pixels[y][x];
+          var bright=(p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var z=parseFloat((bright*100).toFixed(2));
+          var dL=x>0?(f.pixels[y][x-1].r*0.299+f.pixels[y][x-1].g*0.587+f.pixels[y][x-1].b*0.114)/255:bright;
+          var dR=x<res-1?(f.pixels[y][x+1].r*0.299+f.pixels[y][x+1].g*0.587+f.pixels[y][x+1].b*0.114)/255:bright;
+          var dU=y>0?(f.pixels[y-1][x].r*0.299+f.pixels[y-1][x].g*0.587+f.pixels[y-1][x].b*0.114)/255:bright;
+          var dD=y<res-1?(f.pixels[y+1][x].r*0.299+f.pixels[y+1][x].g*0.587+f.pixels[y+1][x].b*0.114)/255:bright;
+          var nx=(dL-dR)*50,ny=(dU-dD)*50,nz=1;
+          var nl=Math.sqrt(nx*nx+ny*ny+nz*nz);
+          px3d.push({x:x,y:y,z:z,r:p.r,g:p.g,b:p.b,a:p.a,hex:'#'+h2(p.r)+h2(p.g)+h2(p.b),brightness:parseFloat(bright.toFixed(4)),normal:{nx:parseFloat((nx/nl).toFixed(4)),ny:parseFloat((ny/nl).toFixed(4)),nz:parseFloat((nz/nl).toFixed(4))}});
+        }
+      }
+      obj3.gif3d.frames.push({index:fi,time:f.time,delayMs:f.delay,pixels3d:px3d});
+    });
+    return JSON.stringify(obj3,null,2);
+  }
+  // default: frames
+  return JSON.stringify({
+    source:fname,generated:now,resolution:res+'x'+res,totalFrames:frames.length,
+    frames:frames.map(function(f){
+      return {index:f.index,time:f.time,delayMs:f.delay,
+        pixels:f.pixels.map(function(row){return row.map(function(p){return {r:p.r,g:p.g,b:p.b,a:p.a};});})};
+    })
+  },null,2);
+}
+
+// ══════════════════════════════════════════════
+// BUILD GIF HTML
+// animated: CSS @keyframes animation switching frames
+// all_frames: side-by-side all frames
+// ══════════════════════════════════════════════
+function buildGifHtml(frames, res, ps, mode, fname){
+  var tw=res*ps, th=res*ps;
+  var totalDelay=0; frames.forEach(function(f){totalDelay+=f.delay;});
+  if(totalDelay<1) totalDelay=frames.length*100;
+
+  if(mode==='all_frames'){
+    var o='<!DOCTYPE html>\n<html>\n<head><meta charset="UTF-8"><title>'+escXml(fname)+' — All Frames</title>\n';
+    o+='<style>body{background:#111;color:#eee;font-family:monospace;padding:10px;} .frame-wrap{display:inline-block;margin:6px;vertical-align:top;text-align:center;} .frame-label{font-size:10px;color:#888;margin-top:4px;}</style></head>\n<body>\n';
+    o+='<h3 style="color:#ff9f1c;">'+escXml(fname)+' — '+frames.length+' Frames ('+res+'×'+res+')</h3>\n';
+    frames.forEach(function(f,fi){
+      o+='<div class="frame-wrap">\n<div style="display:inline-block;line-height:0;font-size:0;">\n';
+      for(var y=0;y<res;y++){
+        o+='<div style="display:flex;">';
+        for(var x=0;x<res;x++){var p=f.pixels[y][x];o+='<div style="width:'+ps+'px;height:'+ps+'px;background:rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+');"></div>';}
+        o+='</div>\n';
+      }
+      o+='</div>\n<div class="frame-label">F'+(fi+1)+' · '+f.delay+'ms</div>\n</div>\n';
+    });
+    o+='</body></html>';
+    return o;
+  }
+
+  // animated mode — CSS @keyframes
+  var pct=0, kfParts=[];
+  var cumMs=0;
+  frames.forEach(function(f,fi){
+    var startPct=parseFloat(((cumMs/totalDelay)*100).toFixed(3));
+    cumMs+=f.delay;
+    var endPct=parseFloat(((cumMs/totalDelay)*100).toFixed(3));
+    kfParts.push({fi:fi,startPct:startPct,endPct:endPct});
+  });
+
+  var o='<!DOCTYPE html>\n<html>\n<head><meta charset="UTF-8"><title>'+escXml(fname)+' — Animated</title>\n<style>\n';
+  o+='body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;flex-direction:column;gap:12px;}\n';
+  o+='.gif-title{color:#ff9f1c;font-family:monospace;font-size:12px;letter-spacing:2px;}\n';
+  o+='.pixel-anim{position:relative;width:'+tw+'px;height:'+th+'px;}\n';
+  o+='.pf{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;animation:gifplay '+totalDelay+'ms steps(1) infinite;}\n';
+
+  // Each frame div
+  frames.forEach(function(f,fi){
+    var delay=0;
+    for(var j=0;j<fi;j++) delay+=frames[j].delay;
+    var delayPct=parseFloat(((delay/totalDelay)*100).toFixed(3));
+    o+='.pf-'+fi+'{animation-delay:-'+(totalDelay-(delay))+'ms;}\n';
+  });
+
+  // @keyframes per frame
+  frames.forEach(function(f,fi){
+    var startPct=kfParts[fi].startPct;
+    var endPct=kfParts[fi].endPct;
+    o+='@keyframes gifplay-'+fi+'{0%,'+startPct+'%{opacity:1;}'+endPct+'%,100%{opacity:0;}}\n';
+    o+='.pf-'+fi+'{animation-name:gifplay-'+fi+';}\n';
+  });
+
+  o+='</style></head>\n<body>\n';
+  o+='<div class="gif-title">'+escXml(fname)+' · '+frames.length+' frames · '+res+'×'+res+'</div>\n';
+  o+='<div class="pixel-anim">\n';
+
+  frames.forEach(function(f,fi){
+    o+='<div class="pf pf-'+fi+'" style="display:grid;grid-template-columns:repeat('+res+','+ps+'px);">\n';
+    for(var y=0;y<res;y++){
+      for(var x=0;x<res;x++){
+        var p=f.pixels[y][x];
+        o+='<div style="width:'+ps+'px;height:'+ps+'px;background:rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+');"></div>';
+      }
+    }
+    o+='\n</div>\n';
+  });
+
+  o+='</div>\n<div class="gif-title" style="color:#666;">'+totalDelay+'ms total · CSS Animated</div>\n</body></html>';
+  return o;
+}
+
+// ══════════════════════════════════════════════
+// SHOW GIF RESULTS
+// ══════════════════════════════════════════════
+function showGifRes(outFormat, frameCount, gRes){
+  // Tab visibility
+  document.getElementById('tabSvg').style.display='none';
+  document.getElementById('tabXml').style.display='none';
+  document.getElementById('tabHtml').style.display=(outFormat.startsWith('html')||outFormat==='both')?'':'none';
+  document.getElementById('tabJson').style.display=(!outFormat.startsWith('html')||outFormat==='both')?'':'none';
+
+  if(outFormat.startsWith('html')||outFormat==='both'){
+    document.getElementById('gifHtmlInfo').style.display='block';
+    var dispHtml=gifHtmlOut.length>5000?gifHtmlOut.substring(0,3500)+'\n... [COPY/DL se full milega] ...':gifHtmlOut;
+    document.getElementById('htmlCode').textContent=dispHtml;
+    document.getElementById('htmlStats').innerHTML=statsHtml(gifHtmlOut)+'<span class="stat">Frames: <b>'+frameCount+'</b></span><span class="stat">Res: <b>'+gRes+'×'+gRes+'</b></span>';
+    activateTab('html');
+  } else {
+    document.getElementById('gifHtmlInfo').style.display='none';
+  }
+
+  if(!outFormat.startsWith('html')||outFormat==='both'){
+    document.getElementById('lottieInfoBox').style.display='none';
+    document.getElementById('imgJsonFormatRow').style.display='none';
+    var dispJson=gifJsonOut.length>6000?gifJsonOut.substring(0,4000)+'\n\n... [TOTAL: '+fb(gifJsonOut.length)+' — COPY/DL se full milega] ...':gifJsonOut;
+    document.getElementById('jsonCode').textContent=dispJson;
+    document.getElementById('jsonStats').innerHTML=statsHtml(gifJsonOut)+'<span class="stat">Frames: <b>'+frameCount+'</b></span><span class="stat">Format: <b>'+outFormat.toUpperCase()+'</b></span>';
+    if(!outFormat.startsWith('html')) activateTab('json');
+  }
+
+  document.getElementById('resultArea').style.display='block';
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth'});
+}
+function buildVideoJson(frames, res, format, fname, duration, interval) {
+  var now=new Date().toISOString();
+  var totalFrames=frames.length;
+  var fps=Math.max(1, Math.round(1/interval));
+
+  if(format==='lottie')   return buildLottie(frames, res, fname, totalFrames, fps);
+  if(format==='3d')       return build3D(frames, res, fname, duration, interval, fps);
+  if(format==='custom')   return buildCustomJson(frames, res, fname, duration, interval, fps, now);
+  if(format==='frames')   return buildFramesJson(frames, res, fname, duration, interval, now);
+  if(format==='metadata') return buildMetaJson(frames, res, fname, duration, interval, now);
+  if(format==='compact')  return buildCompactJson(frames, res, fname, duration, now);
+  if(format==='base64')   return buildBase64Json(frames, res, fname, duration, interval, now);
+  return '{}';
+}
+
+// ══════════════════════════════════════════════
+// 3D JSON FORMAT — Main new feature
+// Structure:
+//   video3d {
+//     metadata: { source, duration, fps, resolution, frames }
+//     frames: [
+//       {
+//         index, time,
+//         pixels3d: [
+//           { x, y, z(depth), r, g, b, a, hex, brightness,
+//             normal: {nx, ny, nz} }
+//         ]
+//       }
+//     ]
+//   }
+//
+// Z-axis (depth) = brightness-based (bright=near, dark=far)
+// Normal vectors = surface orientation from neighboring pixel depths
+// ══════════════════════════════════════════════
+function build3D(frames, res, fname, duration, interval, fps) {
+  var obj={
+    video3d:{
+      metadata:{
+        source:fname,
+        duration:+duration.toFixed(3),
+        fps:fps,
+        frameInterval:interval,
+        totalFrames:frames.length,
+        resolution:{width:res,height:res},
+        depthMethod:'brightness-based',
+        coordinateSystem:'left-handed (x=right,y=down,z=depth)',
+        generated:new Date().toISOString()
+      },
+      frames:[]
+    }
+  };
+
+  frames.forEach(function(f, fi){
+    // Step 1: compute brightness/depth for each pixel
+    var depthMap=[];
+    for(var y=0;y<res;y++){
+      var drow=[];
+      for(var x=0;x<res;x++){
+        var p=f.pixels[y][x];
+        var brightness=(p.r*0.299+p.g*0.587+p.b*0.114)/255;
+        drow.push(brightness); // 0=dark/far, 1=bright/near
+      }
+      depthMap.push(drow);
+    }
+
+    // Step 2: build 3D pixels with normal vectors
+    var pixels3d=[];
+    for(var y=0;y<res;y++){
+      for(var x=0;x<res;x++){
+        var p=f.pixels[y][x];
+        var brightness=(p.r*0.299+p.g*0.587+p.b*0.114)/255;
+        var z=parseFloat((brightness*100).toFixed(2)); // 0-100 range
+
+        // Normal vector from depth gradient
+        var dL=x>0     ? depthMap[y][x-1] : depthMap[y][x];
+        var dR=x<res-1 ? depthMap[y][x+1] : depthMap[y][x];
+        var dU=y>0     ? depthMap[y-1][x] : depthMap[y][x];
+        var dD=y<res-1 ? depthMap[y+1][x] : depthMap[y][x];
+        var nx=parseFloat(((dL-dR)*50).toFixed(3));
+        var ny=parseFloat(((dU-dD)*50).toFixed(3));
+        var nz=1.0;
+        var nlen=Math.sqrt(nx*nx+ny*ny+nz*nz);
+        nx=parseFloat((nx/nlen).toFixed(4));
+        ny=parseFloat((ny/nlen).toFixed(4));
+        nz=parseFloat((nz/nlen).toFixed(4));
+
+        pixels3d.push({
+          x:x, y:y, z:z,
+          r:p.r, g:p.g, b:p.b, a:p.a,
+          hex:'#'+h2(p.r)+h2(p.g)+h2(p.b),
+          brightness:parseFloat(brightness.toFixed(4)),
+          normal:{nx:nx,ny:ny,nz:nz}
+        });
+      }
+    }
+
+    obj.video3d.frames.push({
+      index:fi,
+      time:f.time,
+      pixels3d:pixels3d
+    });
+  });
+
+  return JSON.stringify(obj, null, 2);
+}
+
+// ══════════════════════════════════════════════
+// CUSTOM JSON BUILDER
+// ══════════════════════════════════════════════
+function buildCustomJson(frames, res, fname, duration, interval, fps, now) {
+  function checked(key){ return document.getElementById('cb_'+key)&&document.getElementById('cb_'+key).checked; }
+  var rootKey=(document.getElementById('cjRootKey').value.trim()||'video3d');
+  var framesKey=(document.getElementById('cjFramesKey').value.trim()||'frames');
+
+  var root={};
+  if(checked('source'))     root.source=fname;
+  if(checked('generated'))  root.generated=now;
+  if(checked('duration'))   root.duration=+duration.toFixed(3);
+  if(checked('fps'))        root.fps=fps;
+  if(checked('resolution')) root.resolution={width:res,height:res};
+  if(checked('totalFrames'))root.totalFrames=frames.length;
+
+  root[framesKey]=frames.map(function(f,fi){
+    var fd={};
+    if(checked('frameIndex')) fd.index=fi;
+    if(checked('frameTime'))  fd.time=f.time;
+
+    // Build pixel list
+    var pixList=[];
+    for(var y=0;y<res;y++){
+      for(var x=0;x<res;x++){
+        var p=f.pixels[y][x];
+        var px2={};
+        if(checked('3dCoords')||checked('depth')){
+          var brightness=(p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var z=parseFloat((brightness*100).toFixed(2));
+          if(checked('3dCoords')){ px2.x=x; px2.y=y; px2.z=z; }
+          else if(checked('depth')){ px2.x=x; px2.y=y; px2.depth=z; }
+        } else {
+          px2.x=x; px2.y=y;
+        }
+        if(checked('rgb')){ px2.r=p.r; px2.g=p.g; px2.b=p.b; }
+        if(checked('alpha')) px2.a=p.a;
+        if(checked('hex')) px2.hex='#'+h2(p.r)+h2(p.g)+h2(p.b);
+        if(checked('brightness')) px2.brightness=parseFloat(((p.r*0.299+p.g*0.587+p.b*0.114)/255).toFixed(4));
+        if(checked('normal')){
+          var dL=x>0     ? (f.pixels[y][x-1].r*0.299+f.pixels[y][x-1].g*0.587+f.pixels[y][x-1].b*0.114)/255 : (p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var dR=x<res-1 ? (f.pixels[y][x+1].r*0.299+f.pixels[y][x+1].g*0.587+f.pixels[y][x+1].b*0.114)/255 : (p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var dU=y>0     ? (f.pixels[y-1][x].r*0.299+f.pixels[y-1][x].g*0.587+f.pixels[y-1][x].b*0.114)/255 : (p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var dD=y<res-1 ? (f.pixels[y+1][x].r*0.299+f.pixels[y+1][x].g*0.587+f.pixels[y+1][x].b*0.114)/255 : (p.r*0.299+p.g*0.587+p.b*0.114)/255;
+          var nx2=(dL-dR)*50, ny2=(dU-dD)*50, nz2=1.0;
+          var nl=Math.sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
+          px2.normal={nx:parseFloat((nx2/nl).toFixed(4)),ny:parseFloat((ny2/nl).toFixed(4)),nz:parseFloat((nz2/nl).toFixed(4))};
+        }
+        pixList.push(px2);
+      }
+    }
+    fd.pixels=pixList;
+
+    if(checked('avgColor')){
+      var sr=0,sg=0,sb=0,cnt=res*res;
+      f.pixels.forEach(function(row){row.forEach(function(pp){sr+=pp.r;sg+=pp.g;sb+=pp.b;});});
+      fd.avgColor={r:Math.round(sr/cnt),g:Math.round(sg/cnt),b:Math.round(sb/cnt),hex:'#'+h2(Math.round(sr/cnt))+h2(Math.round(sg/cnt))+h2(Math.round(sb/cnt))};
+    }
+    return fd;
+  });
+
+  var wrapper={};
+  wrapper[rootKey]=root;
+  return JSON.stringify(wrapper, null, 2);
+}
+
+// ══════════════════════════════════════════════
+// OTHER VIDEO JSON FORMATS
+// ══════════════════════════════════════════════
+function buildFramesJson(frames, res, fname, duration, interval, now) {
+  return JSON.stringify({
+    source:fname, generated:now, duration:+duration.toFixed(3),
+    frameInterval:interval, resolution:res+'x'+res,
+    totalFrames:frames.length,
+    frames:frames.map(function(f){
+      return {
+        index:f.index, time:f.time,
+        pixels:f.pixels.map(function(row){
+          return row.map(function(p){ return {r:p.r,g:p.g,b:p.b,a:p.a}; });
+        })
+      };
+    })
+  }, null, 2);
+}
+
+function buildMetaJson(frames, res, fname, duration, interval, now) {
+  return JSON.stringify({
+    metadata:{
+      source:fname, generated:now,
+      duration:+duration.toFixed(3), frameInterval:interval,
+      resolution:{width:res,height:res},
+      totalFrames:frames.length, colorDepth:'RGBA-8bit'
+    },
+    frames:frames.map(function(f){
+      var ar=0,ag=0,ab=0,cnt=res*res;
+      f.pixels.forEach(function(row){row.forEach(function(p){ar+=p.r;ag+=p.g;ab+=p.b;});});
+      return {
+        index:f.index, time:f.time,
+        avgColor:{r:Math.round(ar/cnt),g:Math.round(ag/cnt),b:Math.round(ab/cnt)},
+        pixelData:f.pixels.map(function(row){return row.map(function(p){return [p.r,p.g,p.b,p.a];});})
+      };
+    })
+  }, null, 2);
+}
+
+function buildCompactJson(frames, res, fname, duration, now) {
+  var obj={src:fname,ts:now,dur:+duration.toFixed(3),res:res,frames:[]};
+  frames.forEach(function(f){
+    var flat=[];
+    f.pixels.forEach(function(row){row.forEach(function(p){flat.push(p.r,p.g,p.b,p.a);});});
+    obj.frames.push({t:f.time,px:flat});
+  });
+  return JSON.stringify(obj);
+}
+
+function buildBase64Json(frames, res, fname, duration, interval, now) {
+  return JSON.stringify({
+    source:fname, generated:now, duration:+duration.toFixed(3),
+    frameInterval:interval, resolution:res+'x'+res, totalFrames:frames.length,
+    frames:frames.map(function(f){
+      var buf=[];
+      f.pixels.forEach(function(row){row.forEach(function(p){buf.push(p.r,p.g,p.b,p.a);});});
+      var s=''; buf.forEach(function(b){s+=String.fromCharCode(b);});
+      return {index:f.index, time:f.time, base64:btoa(s)};
+    })
+  }, null, 2);
+}
+
+// ══════════════════════════════════════════════
+// LOTTIE — hold keyframe format
+// ══════════════════════════════════════════════
+function buildLottie(frames, res, fname, totalFrames, fps) {
+  var pixelW=10, lottieW=res*pixelW, lottieH=res*pixelW;
+  var layers=[], layerId=1;
+  function toColor(p){ return [Math.round(p.r)/255,Math.round(p.g)/255,Math.round(p.b)/255,Math.round(p.a)/255]; }
+
+  for(var py=0;py<res;py++){
+    for(var px2=0;px2<res;px2++){
+      var firstP=frames.length>0?frames[0].pixels[py][px2]:{r:0,g:0,b:0,a:255};
+      var isStatic=true;
+      for(var fi=1;fi<frames.length;fi++){
+        var pp=frames[fi].pixels[py][px2];
+        if(pp.r!==firstP.r||pp.g!==firstP.g||pp.b!==firstP.b||pp.a!==firstP.a){isStatic=false;break;}
+      }
+      var colorProp;
+      if(isStatic||frames.length<=1){
+        colorProp={a:0,k:toColor(firstP)};
+      } else {
+        var kfArr=[];
+        for(var fi2=0;fi2<frames.length;fi2++){
+          var cP=frames[fi2].pixels[py][px2];
+          var nextP=fi2+1<frames.length?frames[fi2+1].pixels[py][px2]:cP;
+          kfArr.push({t:fi2,s:toColor(cP),e:toColor(nextP),h:1});
+        }
+        kfArr.push({t:totalFrames});
+        colorProp={a:1,k:kfArr};
+      }
+      var x0=px2*pixelW+pixelW/2, y0=py*pixelW+pixelW/2;
+      layers.push({
+        ddd:0,ind:layerId++,ty:4,nm:'p'+px2+'_'+py,sr:1,bm:0,
+        ip:0,op:totalFrames,st:0,
+        ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[x0,y0,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+        shapes:[{ty:'gr',nm:'g',it:[
+          {ty:'rc',nm:'r',d:1,s:{a:0,k:[pixelW,pixelW]},p:{a:0,k:[0,0]},r:{a:0,k:0}},
+          {ty:'fl',nm:'f',r:1,o:{a:0,k:100},c:colorProp},
+          {ty:'tr',p:{a:0,k:[0,0]},a:{a:0,k:[0,0]},s:{a:0,k:[100,100]},r:{a:0,k:0},o:{a:0,k:100},sk:{a:0,k:0},sa:{a:0,k:0}}
+        ]}]
+      });
+    }
+  }
+  return JSON.stringify({v:'5.9.0',nm:fname,mn:'',fr:fps,ip:0,op:totalFrames,w:lottieW,h:lottieH,ddd:0,assets:[],layers:layers});
+}
+
+// ══════════════════════════════════════════════
+// BUILD HTML
+// ══════════════════════════════════════════════
+function buildHtml(px, res, ps, style) {
+  var o='';
+  if(style==='div'){
+    o='<!-- HTML Pixel Art ('+res+'x'+res+') -->\n<div style="display:inline-block;line-height:0;font-size:0;">\n';
+    for(var y=0;y<res;y++){
+      o+='  <div style="display:flex;">\n';
+      for(var x=0;x<res;x++){var p=px[y][x]; o+='    <div style="width:'+ps+'px;height:'+ps+'px;background:rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+');"></div>\n';}
+      o+='  </div>\n';
+    }
+    o+='</div>';
+  } else if(style==='table'){
+    o='<!-- HTML Table Pixel Art ('+res+'x'+res+') -->\n<table style="border-collapse:collapse;line-height:0;">\n';
+    for(var y=0;y<res;y++){
+      o+='  <tr>\n';
+      for(var x=0;x<res;x++){var p=px[y][x]; o+='    <td style="width:'+ps+'px;height:'+ps+'px;padding:0;background:rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+');"></td>\n';}
+      o+='  </tr>\n';
+    }
+    o+='</table>';
+  } else {
+    var w=res*ps;
+    o='<!-- HTML SPAN Pixel Art ('+res+'x'+res+') -->\n<div style="font-size:0;line-height:0;width:'+w+'px;">\n';
+    for(var y=0;y<res;y++){
+      for(var x=0;x<res;x++){var p=px[y][x]; o+='  <span style="display:inline-block;width:'+ps+'px;height:'+ps+'px;background:rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+');"></span>';}
+      o+='\n';
+    }
+    o+='</div>';
+  }
+  return o;
+}
+
+// ══════════════════════════════════════════════
+// BUILD SVG
+// ══════════════════════════════════════════════
+function buildSvg(px, res, ps, style) {
+  var tw=res*ps, th=res*ps, body='';
+  for(var y=0;y<res;y++){
+    for(var x=0;x<res;x++){
+      var p=px[y][x], op=(p.a/255).toFixed(3), fill='rgb('+p.r+','+p.g+','+p.b+')';
+      var bx=x*ps, by=y*ps;
+      if(style==='rect') body+='  <rect x="'+bx+'" y="'+by+'" width="'+ps+'" height="'+ps+'" fill="'+fill+'" fill-opacity="'+op+'"/>\n';
+      else body+='  <circle cx="'+(bx+ps/2)+'" cy="'+(by+ps/2)+'" r="'+(ps/2)+'" fill="'+fill+'" fill-opacity="'+op+'"/>\n';
+    }
+  }
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!-- SVG Pixel Art ('+res+'x'+res+') -->\n<svg xmlns="http://www.w3.org/2000/svg" width="'+tw+'" height="'+th+'" viewBox="0 0 '+tw+' '+th+'">\n'+body+'</svg>';
+}
+
+function svgEmbed(dataUrl,w,h){
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!-- SVG Embedded Image -->\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">\n  <image x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="none" xlink:href="'+dataUrl+'" href="'+dataUrl+'"/>\n</svg>';
+}
+
+// ══════════════════════════════════════════════
+// BUILD XML
+// ══════════════════════════════════════════════
+function buildXml(px, res, ps, style, fname){
+  var now=new Date().toISOString(), tw=res*ps, th=res*ps;
+  if(style==='pixeldata'){
+    var o='<?xml version="1.0" encoding="UTF-8"?>\n<PixelImage source="'+escXml(fname)+'" width="'+res+'" height="'+res+'" pixelSize="'+ps+'" generated="'+now+'">\n';
+    for(var y=0;y<res;y++){
+      o+='  <Row index="'+y+'">\n';
+      for(var x=0;x<res;x++){var p=px[y][x],hex='#'+h2(p.r)+h2(p.g)+h2(p.b); o+='    <Pixel x="'+x+'" y="'+y+'" r="'+p.r+'" g="'+p.g+'" b="'+p.b+'" a="'+p.a+'" hex="'+hex+'" opacity="'+(p.a/255).toFixed(3)+'"/>\n';}
+      o+='  </Row>\n';
+    }
+    return o+'</PixelImage>';
+  }
+  if(style==='android'){
+    var o='<?xml version="1.0" encoding="utf-8"?>\n<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n';
+    for(var y=0;y<res;y++) for(var x=0;x<res;x++){var p=px[y][x],argb='#'+h2(p.a)+h2(p.r)+h2(p.g)+h2(p.b),l=x*ps,t=y*ps,ri=tw-(x+1)*ps,b=th-(y+1)*ps; o+='  <item android:left="'+l+'dp" android:top="'+t+'dp" android:right="'+ri+'dp" android:bottom="'+b+'dp">\n    <shape android:shape="rectangle"><solid android:color="'+argb+'"/></shape>\n  </item>\n';}
+    return o+'</layer-list>';
+  }
+  if(style==='android-vector'){
+    var tw2=res*ps, th2=res*ps;
+    var o='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    o+='<vector xmlns:android="http://schemas.android.com/apk/res/android"\n';
+    o+='    android:width="'+tw2+'dp"\n';
+    o+='    android:height="'+th2+'dp"\n';
+    o+='    android:viewportWidth="'+tw2+'"\n';
+    o+='    android:viewportHeight="'+th2+'">\n';
+
+    // Same color ke SABHI pixels ek hi <path> mein — pathData mein sab rectangles
+    // Isse tags = unique colors ki count (usually 50-300), lines drastically kam
+    var colorMap={};
+    for(var y=0;y<res;y++){
+      var x=0;
+      while(x<res){
+        var p=px[y][x];
+        if(p.a===0){x++;continue;}
+        var key='#'+h2(p.r)+h2(p.g)+h2(p.b)+'|'+(p.a<255?(p.a/255).toFixed(2):'1');
+        // Same row mein consecutive same-color merge karo
+        var x2=x+1;
+        while(x2<res){
+          var p2=px[y][x2];
+          if(p2.r===p.r&&p2.g===p.g&&p2.b===p.b&&p2.a===p.a) x2++;
+          else break;
+        }
+        var w=(x2-x)*ps, lx=x*ps, ly=y*ps;
+        var seg='M'+lx+','+ly+'h'+w+'v'+ps+'h-'+w+'z';
+        if(!colorMap[key]) colorMap[key]={hex:'#'+h2(p.r)+h2(p.g)+h2(p.b),alpha:p.a,segs:[]};
+        colorMap[key].segs.push(seg);
+        x=x2;
+      }
+    }
+    // Har unique color = ek <path> tag
+    var keys=Object.keys(colorMap);
+    for(var k=0;k<keys.length;k++){
+      var c=colorMap[keys[k]];
+      o+='    <path android:pathData="'+c.segs.join(' ')+'" android:fillColor="'+c.hex+'"';
+      if(c.alpha<255) o+=' android:fillAlpha="'+(c.alpha/255).toFixed(2)+'"';
+      o+='/>\n';
+    }
+    o+='</vector>';
+    return o;
+  }
+  if(style==='svg-xml'){
+    var body='';
+    for(var y=0;y<res;y++) for(var x=0;x<res;x++){var p=px[y][x],op=(p.a/255).toFixed(3); body+='  <rect x="'+(x*ps)+'" y="'+(y*ps)+'" width="'+ps+'" height="'+ps+'" fill="rgb('+p.r+','+p.g+','+p.b+')" fill-opacity="'+op+'"/>\n';}
+    return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="'+tw+'" height="'+th+'" viewBox="0 0 '+tw+' '+th+'">\n'+body+'</svg>';
+  }
+  if(style==='rss'){
+    var o='<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">\n  <title>'+escXml(fname)+'</title>\n  <updated>'+now+'</updated>\n';
+    for(var y=0;y<res;y++) for(var x=0;x<res;x++){var p=px[y][x],hex='#'+h2(p.r)+h2(p.g)+h2(p.b); o+='  <entry>\n    <id>px-'+x+'-'+y+'</id>\n    <x>'+x+'</x><y>'+y+'</y>\n    <color><hex>'+hex+'</hex><r>'+p.r+'</r><g>'+p.g+'</g><b>'+p.b+'</b><a>'+p.a+'</a></color>\n  </entry>\n';}
+    return o+'</feed>';
+  }
+  if(style==='kml'){
+    var o='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>'+escXml(fname)+'</name>\n';
+    for(var y=0;y<res;y++) for(var x=0;x<res;x++){var p=px[y][x],hex=h2(p.r)+h2(p.g)+h2(p.b),aHex=h2(p.a); o+='    <Placemark><name>px_'+x+'_'+y+'</name><Style><PolyStyle><color>'+aHex+hex+'</color></PolyStyle></Style><Polygon><outerBoundaryIs><LinearRing><coordinates>'+x*ps+','+y*ps+' '+(x+1)*ps+','+y*ps+' '+(x+1)*ps+','+(y+1)*ps+' '+x*ps+','+(y+1)*ps+' '+x*ps+','+y*ps+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';}
+    return o+'  </Document>\n</kml>';
+  }
+  return '';
+}
+
+// ══════════════════════════════════════════════
+// BUILD JSON (image)
+// ══════════════════════════════════════════════
+function buildJson(px, res, ps, format, fname){
+  var now=new Date().toISOString();
+  if(format==='full') return JSON.stringify({source:fname,generated:now,width:res,height:res,pixelSize:ps,pixels:px.map(function(row){return row.map(function(p){return {r:p.r,g:p.g,b:p.b,a:p.a};});})},null,2);
+  if(format==='hex')  return JSON.stringify({source:fname,generated:now,width:res,height:res,pixelSize:ps,pixels:px.map(function(row){return row.map(function(p){return '#'+h2(p.r)+h2(p.g)+h2(p.b);});})},null,2);
+  if(format==='compact'){var flat=[];px.forEach(function(row){row.forEach(function(p){flat.push(p.r,p.g,p.b,p.a);});});return JSON.stringify({src:fname,w:res,h:res,ps:ps,px:flat});}
+  if(format==='css'){var vars={};px.forEach(function(row,y){row.forEach(function(p,x){vars['--px-'+x+'-'+y]='rgba('+p.r+','+p.g+','+p.b+','+(p.a/255).toFixed(2)+')';});});return JSON.stringify({source:fname,generated:now,width:res,height:res,cssVariables:vars},null,2);}
+  return '{}';
+}
+
+function rebuildXml(){
+  if(!curPixels.length) return;
+  xmlOut=buildXml(curPixels,curRes,curPs,document.getElementById('xmlStyleSel').value,curFile?curFile.name:'image');
+  document.getElementById('xmlCode').textContent=xmlOut;
+  document.getElementById('xmlStats').innerHTML=statsHtml(xmlOut);
+}
+function rebuildJson(){
+  if(!curPixels.length) return;
+  jsonOut=buildJson(curPixels,curRes,curPs,document.getElementById('jsonFormatSel').value,curFile?curFile.name:'image');
+  document.getElementById('jsonCode').textContent=jsonOut;
+  document.getElementById('jsonStats').innerHTML=statsHtml(jsonOut);
+}
+
+// ══════════════════════════════════════════════
+// SVG EMBED PREVIEW
+// ══════════════════════════════════════════════
+function setSvgCodeDisplay(){
+  var box=document.getElementById('svgCode');
+  var ss=document.getElementById('svgStyle').value;
+  if(ss==='embed'&&svgOut.length>2000){
+    var dIdx=svgOut.indexOf('data:');
+    if(dIdx!==-1){
+      var eIdx=svgOut.indexOf('"',dIdx+10);
+      box.textContent=svgOut.substring(0,dIdx+40)+'...[BASE64: '+Math.round((eIdx-dIdx)/1024)+'KB — COPY/DL se full milega]...'+svgOut.substring(eIdx);
+    } else { box.textContent=svgOut; }
+    try{
+      var blob=new Blob([svgOut],{type:'image/svg+xml'});
+      var url=URL.createObjectURL(blob);
+      var pv=document.getElementById('svgLivePreview');
+      pv.src=url; pv.style.display='block';
+      setTimeout(function(){URL.revokeObjectURL(url);},5000);
+      document.getElementById('svgPreviewWrap').style.display='block';
+    }catch(e){}
+  } else {
+    box.textContent=svgOut;
+    document.getElementById('svgPreviewWrap').style.display='none';
+  }
+}
+
+// ══════════════════════════════════════════════
+// SHOW RESULTS
+// ══════════════════════════════════════════════
+function showRes(){
+  ['tabHtml','tabSvg','tabXml','tabJson'].forEach(function(id){document.getElementById(id).style.display='';});
+  activateTab('html');
+  document.getElementById('htmlCode').textContent=htmlOut;
+  setSvgCodeDisplay();
+  document.getElementById('xmlCode').textContent=xmlOut;
+  document.getElementById('jsonCode').textContent=jsonOut;
+  document.getElementById('imgJsonFormatRow').style.display='';
+  document.getElementById('lottieInfoBox').style.display='none';
+  var n=curRes*curRes;
+  document.getElementById('htmlStats').innerHTML=statsHtml(htmlOut)+'<span class="stat">Pixels: <b>'+n.toLocaleString()+'</b></span>';
+  document.getElementById('svgStats').innerHTML=statsHtml(svgOut)+'<span class="stat">Elements: <b>'+n.toLocaleString()+'</b></span>';
+  document.getElementById('xmlStats').innerHTML=statsHtml(xmlOut)+'<span class="stat">Nodes: <b>'+n.toLocaleString()+'</b></span>';
+  document.getElementById('jsonStats').innerHTML=statsHtml(jsonOut)+'<span class="stat">Pixels: <b>'+n.toLocaleString()+'</b></span>';
+  document.getElementById('resultArea').style.display='block';
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth'});
+}
+
+function showVideoRes(){
+  ['tabHtml','tabSvg','tabXml'].forEach(function(id){document.getElementById(id).style.display='none';});
+  document.getElementById('tabJson').style.display='';
+  activateTab('json');
+  var vFmt=document.getElementById('vJsonFormat').value;
+  document.getElementById('lottieInfoBox').style.display=vFmt==='lottie'?'block':'none';
+  document.getElementById('imgJsonFormatRow').style.display='none';
+  var displayOut=videoJsonOut.length>6000
+    ? videoJsonOut.substring(0,4000)+'\n\n... [TOTAL: '+fb(videoJsonOut.length)+' — COPY/DOWNLOAD se full milega] ...'
+    : videoJsonOut;
+  document.getElementById('jsonCode').textContent=displayOut;
+  document.getElementById('jsonStats').innerHTML=statsHtml(videoJsonOut)+
+    '<span class="stat">Format: <b>'+vFmt.toUpperCase()+'</b></span>'+
+    '<span class="stat">Frames: <b>'+videoJsonOut.split('"time"').length-1+'</b></span>';
+  document.getElementById('resultArea').style.display='block';
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth'});
+}
+
+function activateTab(name){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+  var tabEl=document.getElementById('tab'+name.charAt(0).toUpperCase()+name.slice(1));
+  if(tabEl) tabEl.classList.add('on');
+  document.getElementById('htmlPanel').style.display=name==='html'?'block':'none';
+  document.getElementById('svgPanel').style.display=name==='svg'?'block':'none';
+  document.getElementById('xmlPanel').style.display=name==='xml'?'block':'none';
+  document.getElementById('jsonPanel').style.display=name==='json'?'block':'none';
+}
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  document.getElementById('htmlPanel').style.display=name==='html'?'block':'none';
+  document.getElementById('svgPanel').style.display=name==='svg'?'block':'none';
+  document.getElementById('xmlPanel').style.display=name==='xml'?'block':'none';
+  document.getElementById('jsonPanel').style.display=name==='json'?'block':'none';
+}
+
+// ══════════════════════════════════════════════
+// COPY / DOWNLOAD
+// ══════════════════════════════════════════════
+function doCopy(type){
+  var txt;
+  if(type==='html') txt=gifHtmlOut||htmlOut;
+  else if(type==='svg') txt=svgOut;
+  else if(type==='xml') txt=xmlOut;
+  else txt=gifJsonOut||videoJsonOut||jsonOut;
+  if(!txt){showToast('⚠ Pehle convert karein!');return;}
+  var id='copy'+type.charAt(0).toUpperCase()+type.slice(1);
+  androidCopy(txt,function(){
+    var b=document.getElementById(id);
+    if(b){b.textContent='[ COPIED! ]';b.classList.add('ok');setTimeout(function(){b.textContent='[ COPY ]';b.classList.remove('ok');},2000);}
+    showToast('✅ Copy ho gaya! ('+fb(txt.length)+')');
+  });
+}
+
+function doDl(type){
+  var c,fn,m;
+  var jData=gifJsonOut||videoJsonOut||jsonOut;
+  var hData=gifHtmlOut||htmlOut;
+  if(type==='html')    {c=hData;fn=curMode==='gif'?'gif-animated.html':'pixel.html';m='text/html';}
+  if(type==='htmltxt') {c=hData;fn=curMode==='gif'?'gif-animated.txt':'pixel-html.txt';m='text/plain';}
+  if(type==='svg')     {c=svgOut;fn='pixel.svg';m='image/svg+xml';}
+  if(type==='svgtxt')  {c=svgOut;fn='pixel-svg.txt';m='text/plain';}
+  if(type==='xml')     {c=xmlOut;fn='pixel.xml';m='application/xml';}
+  if(type==='xmltxt')  {c=xmlOut;fn='pixel-xml.txt';m='text/plain';}
+  if(type==='json')    {c=jData;fn=curMode==='gif'?'gif-frames.json':'pixel.json';m='application/json';}
+  if(type==='jsontxt') {c=jData;fn=curMode==='gif'?'gif-frames.txt':'pixel-json.txt';m='text/plain';}
+  if(!c){showToast('⚠ Pehle convert karein!');return;}
+  androidDownload(c,fn,m);
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function h2(n){return ('0'+n.toString(16)).slice(-2);}
+function escXml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setP(v,show){
+  if(show===undefined)show=true;
+  var b=document.getElementById('prog'),f=document.getElementById('pf');
+  if(show){b.classList.add('on');f.style.width=v+'%';}else{b.classList.remove('on');f.style.width='0%';}
+}
+function fb(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(2)+' MB';}
+function statsHtml(s){return '<span class="stat">Size: <b>'+fb(s.length)+'</b></span><span class="stat">Lines: <b>'+s.split('\n').length+'</b></span>';}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2800);}
+</script>
+</body>
+</html>
